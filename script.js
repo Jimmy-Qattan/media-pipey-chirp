@@ -10,6 +10,8 @@ class Vector {
   }
 }
 
+const scoreCount = document.getElementById("scoreCount");
+
 /* REMEMBER TO ADD COLLIDERS BETWEEN EACH PIPE TO ADD POINTS */
 
 let gameStarted = false;
@@ -27,6 +29,19 @@ let pipeList = [];
 let pipeHeights = [];
 
 let pipesPassed = {};
+
+function updatePList(pList) {
+  pList.length = 0;
+
+  document
+    .querySelector("a-scene")
+    .querySelectorAll("[pipe]")
+    .forEach((pipe) => {
+      pList.push(pipe);
+    });
+
+  return pList;
+}
 
 async function createPipe(
   xVal,
@@ -107,6 +122,7 @@ AFRAME.registerComponent("points", {
 
         console.log("collided");
         score++;
+        scoreCount.setAttribute("value", `${score}`);
         console.log(score);
         // console.log("removing box", box);
         // setTimeout(() => {
@@ -136,6 +152,7 @@ async function createSeriesOfPipes(
   separation,
   xPrev = 0
 ) {
+  //updatePList(listOfPipes);
   let finalX;
   const initialNumOfPipes = listOfPipes.length;
   let lastPipeOffSetPrev;
@@ -240,7 +257,7 @@ AFRAME.registerComponent("flappy-bird", {
     this.el.addEventListener("collide", function (e) {
       if (e.detail.body.el) {
         if (e.detail.body.el.hasAttribute("pipe")) {
-          //console.log("AHAHAHAHAHHA");
+          console.log("AHAHAHAHAHHA");
           loserState = true;
         }
       }
@@ -254,7 +271,7 @@ AFRAME.registerComponent("flappy-bird", {
       if (gameStarted == false) {
         gameStarted = true;
 
-        this.el.setAttribute("dynamic-body", "");
+        this.el.setAttribute("dynamic-body", "shape: sphere; sphereRadius: 2;");
         console.log("Jump!");
         this.lastTimeJumped = Date.now();
         this.jumpZ = this.model.object3D.rotation.z;
@@ -264,14 +281,51 @@ AFRAME.registerComponent("flappy-bird", {
         let position = this.el.object3D.position;
         this.el.body.applyImpulse(jumpForce, position);
       } else {
-        console.log("Jump!");
-        this.lastTimeJumped = Date.now();
-        this.jumpZ = this.model.object3D.rotation.z;
-        //console.log("jumpZ", this.jumpZ);
-        this.el.body.velocity.y = 0;
-        let jumpForce = new CANNON.Vec3(0, 40, 0);
-        let position = this.el.object3D.position;
-        this.el.body.applyImpulse(jumpForce, position);
+        if (loserState) {
+          score = 0;
+          scoreCount.value = `0`;
+          scoreCount.setAttribute("value", "0");
+          console.log("NEOWWWW");
+          loserState = false;
+          gameStarted = false;
+          const body = this.el.body;
+          body.position.set(-20, 50, -10);
+          body.velocity.set(0, 0, 0);
+          body.angularVelocity.set(0, 0, 0);
+          this.model.object3D.rotation.set(0, 0, 0);
+
+          setTimeout(() => {
+            this.el.removeAttribute("dynamic-body");
+          }, 1);
+          //this.el.setAttribute("position", "0 50 -10");
+          //this.el.setAttribute("rotation", "0 0 0");
+
+          document
+            .querySelector("a-scene")
+            .querySelectorAll("[pipe]")
+            .forEach((pipe) => {
+              pipe.remove();
+            });
+          document
+            .querySelector("a-scene")
+            .querySelectorAll("[points]")
+            .forEach((point) => {
+              point.remove();
+            });
+
+          const newPipeList = updatePList(pipeList);
+
+          createSeriesOfPipes(20, newPipeList, 25);
+        } else {
+          console.log("Jump!");
+          this.lastTimeJumped = Date.now();
+          this.jumpZ = this.model.object3D.rotation.z;
+          //console.log("jumpZ", this.jumpZ);
+          this.el.body.velocity.y = 0;
+          let jumpForce = new CANNON.Vec3(0, 40, 0);
+          let position = this.el.object3D.position;
+          this.el.body.applyImpulse(jumpForce, position);
+        }
       }
     });
   },
@@ -328,9 +382,9 @@ AFRAME.registerComponent("flappy-bird", {
 document.addEventListener("keypress", (event) => {
   switch (event.key) {
     case " ":
-      if (loserState == false) {
-        bird.emit("jump");
-      }
+      //if (loserState == false) {
+      bird.emit("jump");
+      //}
       break;
   }
 });
@@ -372,15 +426,10 @@ async function start() {
   });
   video.srcObject = stream;
 
-  // ✅ WAIT until the video actually has size
   video.addEventListener("loadeddata", () => {
-    //canvas.width = video.videoWidth;
-    //canvas.height = video.videoHeight;
-
     console.log("Video ready:", video.videoWidth, video.videoHeight);
 
     function loop() {
-      // ✅ SAFETY CHECK (prevents your crash)
       if (video.videoWidth === 0 || video.videoHeight === 0) {
         requestAnimationFrame(loop); // What is this?
         return;
@@ -388,36 +437,8 @@ async function start() {
 
       const results = handLandmarker.detectForVideo(video, performance.now());
 
-      // console.log(results.landmarks);
-
       if (results.landmarks.length > 0) {
         const indexTip = results.landmarks[0][20];
-        //const x = indexTip.x * canvas.width;
-        //const y = indexTip.y * canvas.height;
-
-        //console.log("Index tip:", x, y);
-        //console.log(results.landmarks[0]);
-
-        /*ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.arc(x, y, 8, 0, Math.PI * 2);
-            ctx.fillStyle = "red";
-            ctx.fill();*/
-
-        /*ctx.clearRect(0, 0, canvas.width, canvas.height);
-            results.landmarks[0].forEach((value) => {
-            ctx.beginPath();
-            ctx.arc(
-                value.x * canvas.width,
-                value.y * canvas.height,
-                8,
-                0,
-                Math.PI * 2
-            );
-            ctx.fillStyle = "red";
-            ctx.fill();
-            ctx.closePath();
-            });*/
 
         const thumbVector = new Vector(
           results.landmarks[0][4].x,
@@ -445,25 +466,20 @@ async function start() {
             fingerStretchCal + " is the new calibrated value";
         });
 
-        //console.log(distBetweenThumbandPointer);
-
         if (distBetweenThumbandPointer <= 0.05) {
           if (currentlyInTap == false) {
-            if (loserState == false) {
-              bird.emit("jump");
-            }
+            bird.emit("jump");
             currentlyInTap = true;
           }
         } else {
           currentlyInTap = false;
-          //console.log("Nothing");
         }
       }
 
       requestAnimationFrame(loop);
     }
 
-    loop(); // ✅ START ONLY AFTER VIDEO IS READY
+    loop();
   });
 }
 
