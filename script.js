@@ -258,6 +258,7 @@ AFRAME.registerComponent("flappy-bird", {
       if (e.detail.body.el) {
         if (e.detail.body.el.hasAttribute("pipe")) {
           console.log("AHAHAHAHAHHA");
+          scoreCount.setAttribute("value", "Press Space to Play");
           loserState = true;
         }
       }
@@ -265,6 +266,7 @@ AFRAME.registerComponent("flappy-bird", {
     });
     this.model = this.el.querySelector("[gltf-model]");
     this.lastTimeJumped = 0;
+    this.initialSpeed = this.data.speed;
 
     this.el.addEventListener("jump", () => {
       console.log("jump :)");
@@ -293,6 +295,7 @@ AFRAME.registerComponent("flappy-bird", {
           body.velocity.set(0, 0, 0);
           body.angularVelocity.set(0, 0, 0);
           this.model.object3D.rotation.set(0, 0, 0);
+          this.initialSpeed = this.data.speed;
 
           setTimeout(() => {
             this.el.removeAttribute("dynamic-body");
@@ -338,8 +341,8 @@ AFRAME.registerComponent("flappy-bird", {
 
     if (this.el.body) {
       if (gameStarted == true && loserState == false) {
-        this.data.speed += 0.01;
-        this.el.body.velocity.x = this.data.speed;
+        this.initialSpeed += 0.01;
+        this.el.body.velocity.x = this.initialSpeed;
       } else {
         this.el.body.velocity.x = 0;
       }
